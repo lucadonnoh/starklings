@@ -2,11 +2,9 @@
 
 # Functions can take arguments and return results
 
-# I AM NOT DONE
-
 # TODO: make the test pass!
 
-func takes_two_arguments_and_returns_one() -> ():
+func takes_two_arguments_and_returns_one(a : felt, b : felt) -> (sum : felt):
     return (a + b)  # Do not change
 end
 
