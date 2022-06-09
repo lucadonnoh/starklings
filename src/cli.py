@@ -1,11 +1,12 @@
-from pathlib import Path
 import sentry_sdk
-from .runner import Runner
-from .verify import ExerciseSeeker
-from .constants import exercise_files_architecture
-from .utils.starklings_directory import StarklingsDirectory, VersionManager
-from .solution import SolutionPatcher
-
+from rich.syntax import Syntax
+from rich.console import Console
+from src.runner import Runner
+from src.exercises import exercises
+from src.exercises.seeker import ExerciseSeeker
+from src.utils.starklings_directory import StarklingsDirectory, VersionManager
+from src.config import root_directory
+from src.solutions.repository import get_solution
 
 sentry_sdk.init(
     "https://73212d09152344fd8e351ef180b8fa75@o1254095.ingest.sentry.io/6421829",
@@ -22,33 +23,38 @@ def capture_solution_request(solution_path: str):
         sentry_sdk.capture_message("Solution requested", level="info")
 
 
-async def cli(args, script_root: Path):
-    starklings_directory = StarklingsDirectory(script_root)
+async def cli(args):
+    starklings_directory = StarklingsDirectory()
     version_manager = VersionManager(starklings_directory)
+    exercise_seeker = ExerciseSeeker(exercises)
+    runner = Runner(root_directory, exercise_seeker)
 
     if args.version:
         version_manager.print_current_version()
 
     if args.watch:
         sentry_sdk.capture_message("Starting the watch mode")
-        runner = Runner(script_root)
         runner.run()
 
     if args.verify:
         sentry_sdk.capture_message("Verifying all the exercises")
-        seeker = ExerciseSeeker(exercise_files_architecture, script_root)
-        exercise_path = seeker.find_next_exercise()
+        exercise_path = exercise_seeker.get_next_undone()
 
         if not exercise_path:
-            print("All exercises finished ! 🎉")
+            print("All exercises finished! 🎉")
         else:
             print(exercise_path)
 
     if args.solution:
         capture_solution_request(args.solution)
-        displayer = SolutionPatcher(args.solution)
-        solution = displayer.get_solution()
-        if solution:
-            print(solution)
-        else:
-            print("Solution file not found")
+        exercise_path = root_directory / args.solution
+        try:
+            solution = get_solution(exercise_path)
+
+            console = Console()
+            syntax = Syntax(
+                solution, "python", line_numbers=True, background_color="default"
+            )
+            console.print(syntax)
+        except FileNotFoundError:
+            print("Solution not found")
