@@ -14,6 +14,8 @@
 
 ---
 
+[Original repo](https://github.com/onlydustxyz/starklings)
+
 ## Installation
 
 Clone the repository to your local machine:
